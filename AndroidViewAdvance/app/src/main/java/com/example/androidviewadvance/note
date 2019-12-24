@@ -1,0 +1,78 @@
+# 物理单位：mm inch=2.54cm pt=0.035cm
+# 逻辑单位： dp\dpi\px\sp
+
+# px最简单：就是像素，一般view的各种绝对、相对单位
+# 设备的分辨率单位也是px：但是注意分辨率是可以更改的，也就是单位长度上的像素数量是可以更改的
+
+# 同样的px，同一台设备，在高分辨率设置下显得更小，低分辨率设置下显得更大
+
+# ppi(单位inch像素):ppi=(len_pixel^2+wid_pixel^2)^(1/2)/屏幕对角线inch
+# ppi越高越细腻
+# 所以设备分辨率并不是越高越细腻，因为还要看屏幕本身的物理大小，如果物理大小太大，即使分辨率较高，也还是可能看见像素点
+# ppi应该是视觉较好的标准
+
+# dpi：每inch的dot数量，注意一个pixel可能由多个dot组成，但是对于android而言，ppi基本等同ppi
+
+# 为了解决同样px在不同分辨率下大小不同的问题，引入dp
+# dp(基于密度的像素单位，仅和设备的dpi有关),在160dpi的设备上，1dp包含1px
+# 如果dpi高于160dpi，那么1dp会包含更多的px
+# 换算关系px=dp*(dpi/160)
+# sp(缩放无关的像素):和dp类似，当文字正常时1sp=1dp,当系统设定字体为大时，1sp大于1dp
+
+######LayoutInflater的工作过程######
+# 调用inflate，使用xml解析节点
+# 首先创建的是root布局，调用createViewFromTag,调用createView，并且使用反射返回view
+# 然后创建子view，调用rInflateChildren，调用rInflate，然后还是同样先创建root，再创建子view，递归实现
+# 这样实际上可以得到一个DOM
+
+# attachToRoot:
+# 1.若root为null，则attachToRoot无效
+# 2.若root不为null，且attachToRoot为true，那么给该view嵌套上root，但是这样就不能addview
+# 3.若root不为null，且attachToRoot为false，则使用父view的属性设置该view
+# 4.attachToRoot默认为true
+
+# 比如，如果要add一个button，而button外面没有layout，那么button设置的大小是无效的，有两种方式：
+# 1.给button嵌套一个layout，让其属性生效
+# 2.View buttonLayout=layoutInflater.inflate(R.layout.button_layout,mainLayout,false);
+# 这样既在逻辑上指定了一个嵌套的layout，使得属性生效，又不会实际的将view给add到mainLayout中
+
+# View绘制流程：系统会从ViewRootImpl开始（对应一个Window),调用performTraversals,绘制所有view
+# onMeasure,调用measure，参数为widthMeasureSpec和heightMeasureSpec
+# MeasureSpec由Mode和Size组成
+# Mode类型：EXACTLY 此时大小由Size确定 AT_MOST:此时最多不能超过Size UNSPECIFIED：无任何限制，少见
+# 注意：View的Spec是父和子共同确定的，最外层的root view的大小由window确定
+# 注意：measure方法是final的，onMeasure是可重写的
+
+# ViewGroup有measureChildren和measureChild可供调用，用来测量子view的大小
+# View的默认onMeasure会给一个推荐的大小，不会调用measure方法
+# ViewGroup的onMeasure目的是先确定子view的size，再确定自己的size，提供给layout参考
+
+# layout：接收左上右下坐标，注意是相对于其父view的坐标，viewGroup的onLayout没有默认实现，不同的viewgroup需要自己实现layout
+# 注意layout只需要确定子view相对于自己的位置即可，其本身的位置由父layout确定
+
+# draw->调用onDraw，绘制本身，然后dispatchDraw，绘制child
+
+
+# 简而言之：子view的size由父view和本身spec和mode确定，先确定子viewsize，再确定父viewsize，父view需要安排每一个子view的位置
+
+###################
+# 关于父spec和子spec和lp
+# 若父MODE是EXACT：1.子是match parent:EXACT 2.子是精确值：EXACT 3.子是wrap content：AT MOST
+# 若父MODE是AT MOST：1.子是match parent：AT MOST 2.子是精确值：EXACT 3.子是wrap content：AT MOST
+# 注意，父如果measure子，那么父的MODE一定是已知，最开始的View的MODE由window设置，肯定是Exact
+# 结论：通过父的spec和子spec可以准确确定子的最终绝对大小
+
+# View:measure->onMeasure:由于measure是final，所以只能重写onMeasure，View的onMeasure有默认实现，就是直接给出一个默认大小，默认大小就是background和min属性的较小值
+
+# 当然View的onMeasure默认实现基本不符合要求，而是需要根据具体的View去重写
+
+# ViewGroup：measure->onMeasure,但是onMeasure没有默认实现，自己重写的时候一般先measure children，再measure自己
+
+####非常关键！！！####
+# 注意measure的spec一定是已经生成好的spec，这个在view group中，这个spec是根据父的spec和子的属性和padding\margin得到的
+####非常关键！！！####
+
+# 对于ViewGroup：需要在onMeasure和onLayout中考虑自己的padding和子view的margin
+# 对于View：只要在draw中考虑自己的padding
+
+eg.父view是wrapcontent，子view是matchparent，假设父view知道自己最多能占多大，那么子view肯定也是最多占这么多，所以子view是AT_MOST
