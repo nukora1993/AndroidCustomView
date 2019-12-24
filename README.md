@@ -8,4 +8,4 @@ Android自定义View备忘
 
 wrap content的处理：根据传入的spec，如果是at_most,那么根据情况取值
 
-注意viemeasure时传入的spec是规定自己的，如果是ViewGroup，那么首先应当为child生成spec，再调用child的measure，这个过程写在了view group的measureChild函数中
+注意view measure时传入的spec是规定自己的，如果是ViewGroup，那么首先应当为child生成spec，再调用child的measure，这个过程写在了view group的measureChild函数中
